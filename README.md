@@ -115,6 +115,12 @@ assert shared_secret_sender == shared_secret_receiver
 print("Shared secret established securely 🔐")
 ```
 
+## 🖥️ Live Dashboard
+
+Interactive 3D visualization of the scheme — torus lattice, NTT frequency spectrum, CBD noise histogram and the Fujisaki–Okamoto re-encryption pipeline (including a simulated bitflip attack with implicit rejection):
+
+**→ https://cstrsk.de/RE-KEM-Dashboard/**
+
 ## 🧪 Running the Self-Test & Benchmark
 
 ```bash

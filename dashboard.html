@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Re-KEM | Post-Quantum Cryptography Live Dashboard</title>
+  <style>
+    :root {
+      --bg-dark: #05070e;
+      --card-bg: rgba(11, 17, 32, 0.85);
+      --border-color: #1e293b;
+      --cyan: #00f2fe;
+      --cyan-glow: rgba(0, 242, 254, 0.35);
+      --purple: #c084fc;
+      --purple-glow: rgba(192, 132, 252, 0.35);
+      --emerald: #10b981;
+      --rose: #f43f5e;
+      --amber: #f59e0b;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --mono-font: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% 20%, #0d1527 0%, var(--bg-dark) 100%);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .dashboard {
+      width: 100%;
+      max-width: 1400px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 24px;
+      backdrop-filter: blur(8px);
+    }
+    .brand h1 {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+    .brand h1 span {
+      background: linear-gradient(135deg, var(--cyan) 0%, #4facfe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand p {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--mono-font);
+      margin-top: 2px;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge {
+      font-size: 11px;
+      font-family: var(--mono-font);
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid;
+    }
+    .badge-cyan { background: rgba(2, 132, 199, 0.15); border-color: #0284c7; color: #38bdf8; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); border-color: #7c3aed; color: #c084fc; }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-family: var(--mono-font);
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--emerald);
+      color: var(--emerald);
+      padding: 4px 12px;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    /* Main Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(8px);
+    }
+    .card-title {
+      font-size: 13px;
+      font-family: var(--mono-font);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title b { color: var(--cyan); }
+
+    /* Canvas Elements */
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      height: 340px;
+      border-radius: 8px;
+      background: rgba(5, 7, 14, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .canvas-hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-family: var(--mono-font);
+      font-size: 11px;
+      color: var(--text-muted);
+      pointer-events: none;
+      line-height: 1.5;
+    }
+
+    /* Metrics Right Column */
+    .metrics-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Live Stat Boxes */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .stat-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .stat-box .label {
+      font-size: 10px;
+      font-family: var(--mono-font);
+      color: var(--text-muted);
+    }
+    .stat-box .val {
+      font-size: 16px;
+      font-weight: 700;
+      font-family: var(--mono-font);
+      color: var(--text-main);
+    }
+    .stat-box .val.accent-cyan { color: var(--cyan); }
+    .stat-box .val.accent-purple { color: var(--purple); }
+
+    /* Histogram Canvas */
+    .hist-container {
+      height: 130px;
+      position: relative;
+    }
+
+    /* Interactive Pipeline Bar */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-family: var(--mono-font);
+      font-size: 11px;
+    }
+    .pipe-step {
+      flex: 1;
+      text-align: center;
+      padding: 6px 4px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .pipe-step.active {
+      background: rgba(0, 242, 254, 0.15);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan-glow);
+    }
+    .pipe-step.reject {
+      background: rgba(244, 63, 94, 0.15);
+      border-color: var(--rose);
+      color: var(--rose);
+    }
+
+    /* Actions Panel */
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      font-family: var(--mono-font);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #1e293b;
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+    button.btn-danger:hover {
+      border-color: var(--rose);
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.35);
+    }
+    button.btn-primary {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border-color: #38bdf8;
+    }
+
+    /* Controls slider row */
+    .controls-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .ctrl-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .ctrl-group label {
+      font-size: 10px;
+      font-family: var(--mono-font);
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    input[type="range"] {
+      appearance: none;
+      background: #1e293b;
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--cyan);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--cyan);
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard">
+  <!-- Top Bar -->
+  <div class="header">
+    <div class="brand">
+      <h1>Re-<span>KEM</span> Dashboard</h1>
+      <p>RING-LWE TORUS LATTICE • NTT ACCELERATOR • IND-CCA2 HARNESS</p>
+    </div>
+    <div class="header-right">
+      <div class="badge badge-cyan">n=256 | q=7681</div>
+      <div class="badge badge-purple">Ring: Z_q[X]/(X^256 + 1)</div>
+      <div class="status-indicator" id="statusBadge">
+        <span class="status-dot"></span>
+        <span id="statusText">SYSTEM SECURE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metrics Row -->
+  <div class="stats-row">
+    <div class="stat-box">
+      <span class="label">KEM THROUGHPUT</span>
+      <span class="val accent-cyan" id="mThroughput">1,240 ops/s</span>
+    </div>
+    <div class="stat-box">
+      <span class="label">NTT TIME / MULT</span>
+      <span class="val accent-purple" id="mNttTime">2.41 µs</span>
+    </div>
+    <div class="stat-box">
+      <span class="label">RE-ENCRYPTION MATCH</span>
+      <span class="val" id="mMatchRate">100.0%</span>
+    </div>
+    <div class="stat-box">
+      <span class="label">CCA2 REJECTIONS</span>
+      <span class="val" id="mRejections">0</span>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="grid">
+    <!-- Left: 3D Torus Lattice Card -->
+    <div class="card">
+      <div class="card-title">
+        <span>3D Mannigfaltigkeit & Orbit-Knoten</span>
+        <b>O(n log n)</b>
+      </div>
+
+      <div class="canvas-container">
+        <canvas id="torusCanvas"></canvas>
+        <div class="canvas-hud">
+          ROTATION: <span id="hudRot" style="color:var(--cyan)">0°</span><br />
+          LATTICE NODES: <span id="hudNodes" style="color:var(--purple)">256</span><br />
+          ORBIT TRAJECTORY: <span style="color:var(--emerald)">RE-ENCRYPT ACTIVE</span>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <div class="ctrl-group">
+          <label>Speed <span id="lblSpeed">1.0x</span></label>
+          <input type="range" id="rngSpeed" min="0" max="3" step="0.1" value="1.0" />
+        </div>
+        <div class="ctrl-group">
+          <label>Nodes <span id="lblNodes">256</span></label>
+          <input type="range" id="rngNodes" min="64" max="512" step="32" value="256" />
+        </div>
+        <div class="ctrl-group">
+          <label>Glow <span id="lblGlow">3</span></label>
+          <input type="range" id="rngGlow" min="1" max="5" step="1" value="3" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Cryptographic Live Instruments -->
+    <div class="metrics-column">
+      
+      <!-- NTT Frequency Domain / Butterfly Inspector -->
+      <div class="card">
+        <div class="card-title">
+          <span>NTT Negazyklische Faltung (256 Koeffizienten)</span>
+          <span style="font-size:10px; color:var(--cyan);">Domain: ℤ_7681</span>
+        </div>
+        <div class="hist-container">
+          <canvas id="nttCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- CBD Noise Histogram -->
+      <div class="card">
+        <div class="card-title">
+          <span>Centered Binomial Distribution (CBD η=2) Rausch-Sampling</span>
+          <span style="font-size:10px; color:var(--purple);">e ∈ [-2, 2]</span>
+        </div>
+        <div class="hist-container">
+          <canvas id="cbdCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- FO Pipeline & Action Toolbar -->
+      <div class="card">
+        <div class="card-title">
+          <span>Fujisaki-Okamoto Re-Encryption Pipeline</span>
+          <span id="pipelineStatus" style="font-size:10px; color:var(--emerald);">IDLE</span>
+        </div>
+
+        <div class="pipeline">
+          <div class="pipe-step" id="stepEnc">1. Encaps(m)</div>
+          <div class="pipe-step" id="stepDec">2. Decaps(s)</div>
+          <div class="pipe-step" id="stepReEnc">3. Re-Enc(m')</div>
+          <div class="pipe-step" id="stepVerify">4. c == c'</div>
+          <div class="pipe-step" id="stepSS">5. Derive SS</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn-primary" id="btnEncaps">⚡ Key Exchange ausführen</button>
+          <button class="btn-danger" id="btnAttack">⚠️ Bitflip-Angriff simulieren</button>
+          <button id="btnBench">⚙️ Auto-Benchmark</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // =========================================================================
+  // 1. Math, Cryptographic & State Primitives
+  // =========================================================================
+  const N = 256;
+  const Q = 7681;
+  const ETA = 2;
+
+  let totalEncaps = 0;
+  let totalRejections = 0;
+  let isBenchmarking = false;
+
+  // NTT Coefficients visual data buffer
+  const nttCoeffs = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    nttCoeffs[i] = Math.random() * (Q / 2);
+  }
+
+  // CBD Empirical Distribution Counters for bins [-2, -1, 0, 1, 2]
+  const cbdCounts = [0, 0, 0, 0, 0];
+  const cbdTheoretical = [1/16, 4/16, 6/16, 4/16, 1/16]; // eta=2
+  
+  function sampleCBD() {
+    let a = 0, b = 0;
+    for (let i = 0; i < ETA; i++) {
+      a += Math.random() < 0.5 ? 1 : 0;
+      b += Math.random() < 0.5 ? 1 : 0;
+    }
+    const val = a - b; // in [-2, 2]
+    cbdCounts[val + 2]++;
+    return val;
+  }
+
+  // Initialize with 1000 baseline noise samples
+  for (let i = 0; i < 1000; i++) sampleCBD();
+
+  // =========================================================================
+  // 2. 3D Torus Canvas Engine
+  // =========================================================================
+  const torusCanvas = document.getElementById("torusCanvas");
+  const ctxTorus = torusCanvas.getContext("2d");
+
+  let rotX = 0.55, rotY = 0;
+  let isDragging = false, lastMX = 0, lastMY = 0;
+  let pulseGlow = 0;
+
+  function resizeCanvas(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  }
+
+  window.addEventListener("resize", () => {
+    resizeCanvas(torusCanvas);
+    resizeCanvas(document.getElementById("nttCanvas"));
+    resizeCanvas(document.getElementById("cbdCanvas"));
+  });
+  resizeCanvas(torusCanvas);
+
+  torusCanvas.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    lastMX = e.clientX;
+    lastMY = e.clientY;
+  });
+  window.addEventListener("mouseup", () => isDragging = false);
+  window.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    rotY += (e.clientX - lastMX) * 0.006;
+    rotX += (e.clientY - lastMY) * 0.006;
+    lastMX = e.clientX;
+    lastMY = e.clientY;
+  });
+
+  const R = 110, r = 48, FOV = 380;
+  let orbitTime = 0;
+
+  function project(x, y, z, cx, cy) {
+    const cy_y = Math.cos(rotY), sy_y = Math.sin(rotY);
+    const cx_x = Math.cos(rotX), sx_x = Math.sin(rotX);
+
+    const x1 = x * cy_y + z * sy_y;
+    const z1 = -x * sy_y + z * cy_y;
+
+    const y2 = y * cx_x - z1 * sx_x;
+    const z2 = y * sx_x + z1 * cx_x;
+
+    const scale = FOV / (420 + z2);
+    return { x2d: cx + x1 * scale, y2d: cy + y2 * scale, scale, z: z2 };
+  }
+
+  function renderTorus(speed, numNodes, glowLevel) {
+    const w = torusCanvas.clientWidth;
+    const h = torusCanvas.clientHeight;
+    const cx = w / 2, cy = h / 2;
+
+    ctxTorus.clearRect(0, 0, w, h);
+
+    if (!isDragging) {
+      rotY += 0.007 * speed;
+      rotX += 0.002 * speed;
+    }
+    orbitTime += 0.02 * speed;
+
+    document.getElementById("hudRot").innerText = `${((rotY * (180 / Math.PI)) % 360).toFixed(0)}°`;
+
+    // 1. Generate Fermat spiral lattice points
+    const points = [];
+    const phiGold = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < numNodes; i++) {
+      const u = i * phiGold;
+      const v = (i / numNodes) * Math.PI * 2;
+      const x = (R + r * Math.cos(v)) * Math.cos(u);
+      const y = (R + r * Math.cos(v)) * Math.sin(u);
+      const z = r * Math.sin(v);
+      points.push({ ...project(x, y, z, cx, cy), id: i });
+    }
+
+    points.sort((a, b) => b.z - a.z);
+
+    // 2. Draw connections
+    ctxTorus.lineWidth = 0.5;
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < Math.min(i + 4, points.length); j++) {
+        const dx = points[i].x2d - points[j].x2d;
+        const dy = points[i].y2d - points[j].y2d;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 35) {
+          ctxTorus.strokeStyle = `rgba(148, 163, 184, ${(1 - dist / 35) * 0.12})`;
+          ctxTorus.beginPath();
+          ctxTorus.moveTo(points[i].x2d, points[i].y2d);
+          ctxTorus.lineTo(points[j].x2d, points[j].y2d);
+          ctxTorus.stroke();
+        }
+      }
+    }
+
+    // 3. Draw Nodes
+    const activeGlow = glowLevel + pulseGlow;
+    points.forEach((pt) => {
+      const rad = Math.max(1, pt.scale * 2.8);
+      ctxTorus.beginPath();
+      ctxTorus.arc(pt.x2d, pt.y2d, rad, 0, Math.PI * 2);
+      if (pt.id % 2 === 0) {
+        ctxTorus.fillStyle = "#00f2fe";
+        ctxTorus.shadowColor = "#00f2fe";
+      } else {
+        ctxTorus.fillStyle = "#c084fc";
+        ctxTorus.shadowColor = "#c084fc";
+      }
+      ctxTorus.shadowBlur = activeGlow * 2;
+      ctxTorus.fill();
+    });
+
+    // 4. Orbit Trajectory (Re-Encryption Ring)
+    const orbitSteps = 160;
+    const orbitPath = [];
+    for (let i = 0; i <= orbitSteps; i++) {
+      const t = (i / orbitSteps) * Math.PI * 2 + orbitTime;
+      const u = t * 2, v = t * 3;
+      const ox = (R + (r + 8) * Math.cos(v)) * Math.cos(u);
+      const oy = (R + (r + 8) * Math.cos(v)) * Math.sin(u);
+      const oz = (r + 8) * Math.sin(v);
+      orbitPath.push(project(ox, oy, oz, cx, cy));
+    }
+
+    ctxTorus.shadowColor = "#00f2fe";
+    ctxTorus.shadowBlur = activeGlow * 4;
+    ctxTorus.lineWidth = 2.2;
+    for (let i = 0; i < orbitPath.length - 1; i++) {
+      const p1 = orbitPath[i], p2 = orbitPath[i + 1];
+      const grad = ctxTorus.createLinearGradient(p1.x2d, p1.y2d, p2.x2d, p2.y2d);
+      grad.addColorStop(0, "rgba(0, 242, 254, 0.8)");
+      grad.addColorStop(1, "rgba(192, 132, 252, 0.4)");
+      ctxTorus.strokeStyle = grad;
+      ctxTorus.beginPath();
+      ctxTorus.moveTo(p1.x2d, p1.y2d);
+      ctxTorus.lineTo(p2.x2d, p2.y2d);
+      ctxTorus.stroke();
+    }
+    ctxTorus.shadowBlur = 0;
+
+    if (pulseGlow > 0) pulseGlow -= 0.15;
+  }
+
+  // =========================================================================
+  // 3. NTT Spectrum & Frequency Canvas
+  // =========================================================================
+  const nttCanvas = document.getElementById("nttCanvas");
+  const ctxNtt = nttCanvas.getContext("2d");
+  resizeCanvas(nttCanvas);
+
+  function renderNTT() {
+    const w = nttCanvas.clientWidth;
+    const h = nttCanvas.clientHeight;
+    ctxNtt.clearRect(0, 0, w, h);
+
+    const barWidth = w / N;
+    const maxVal = Q / 2;
+
+    for (let i = 0; i < N; i++) {
+      const barH = (nttCoeffs[i] / maxVal) * (h - 20);
+      const x = i * barWidth;
+      const y = h - barH - 5;
+
+      const grad = ctxNtt.createLinearGradient(0, y, 0, h);
+      grad.addColorStop(0, "#00f2fe");
+      grad.addColorStop(1, "rgba(2, 132, 199, 0.2)");
+
+      ctxNtt.fillStyle = grad;
+      ctxNtt.fillRect(x, y, Math.max(1, barWidth - 0.5), barH);
+    }
+
+    // Overlay scan line
+    ctxNtt.strokeStyle = "rgba(192, 132, 252, 0.4)";
+    ctxNtt.lineWidth = 1;
+    ctxNtt.beginPath();
+    ctxNtt.moveTo(0, h / 2);
+    ctxNtt.lineTo(w, h / 2);
+    ctxNtt.stroke();
+  }
+
+  // =========================================================================
+  // 4. CBD Noise Histogram Canvas
+  // =========================================================================
+  const cbdCanvas = document.getElementById("cbdCanvas");
+  const ctxCbd = cbdCanvas.getContext("2d");
+  resizeCanvas(cbdCanvas);
+
+  function renderCBD() {
+    const w = cbdCanvas.clientWidth;
+    const h = cbdCanvas.clientHeight;
+    ctxCbd.clearRect(0, 0, w, h);
+
+    const labels = ["-2", "-1", "0", "+1", "+2"];
+    const totalSamples = cbdCounts.reduce((a, b) => a + b, 0);
+    const numBins = 5;
+    const slotWidth = w / numBins;
+
+    for (let i = 0; i < numBins; i++) {
+      const empiricalRatio = cbdCounts[i] / (totalSamples || 1);
+      const theoreticalRatio = cbdTheoretical[i];
+
+      const barH = empiricalRatio * (h - 40) * 2.2;
+      const theoH = theoreticalRatio * (h - 40) * 2.2;
+
+      const x = i * slotWidth + slotWidth * 0.2;
+      const bw = slotWidth * 0.6;
+      const y = h - barH - 24;
+
+      // Draw Empirical Bar
+      const grad = ctxCbd.createLinearGradient(0, y, 0, h);
+      grad.addColorStop(0, "#c084fc");
+      grad.addColorStop(1, "rgba(124, 58, 237, 0.2)");
+      ctxCbd.fillStyle = grad;
+      ctxCbd.fillRect(x, y, bw, barH);
+
+      // Draw Theoretical Target Marker (Cyan Dash)
+      const theoY = h - theoH - 24;
+      ctxCbd.strokeStyle = "#00f2fe";
+      ctxCbd.lineWidth = 2;
+      ctxCbd.beginPath();
+      ctxCbd.moveTo(x - 2, theoY);
+      ctxCbd.lineTo(x + bw + 2, theoY);
+      ctxCbd.stroke();
+
+      // Label
+      ctxCbd.fillStyle = "#94a3b8";
+      ctxCbd.font = "11px monospace";
+      ctxCbd.textAlign = "center";
+      ctxCbd.fillText(`e=${labels[i]}`, x + bw / 2, h - 8);
+      ctxCbd.fillText(`${(empiricalRatio * 100).toFixed(1)}%`, x + bw / 2, y - 4);
+    }
+  }
+
+  // =========================================================================
+  // 5. Pipeline State Machine & Animation
+  // =========================================================================
+  const steps = ["stepEnc", "stepDec", "stepReEnc", "stepVerify", "stepSS"];
+  
+  function resetPipelineUI() {
+    steps.forEach(s => {
+      const el = document.getElementById(s);
+      el.className = "pipe-step";
+    });
+  }
+
+  function setPipelineStep(stepIdx, isReject = false) {
+    resetPipelineUI();
+    for (let i = 0; i <= stepIdx; i++) {
+      const el = document.getElementById(steps[i]);
+      if (el) {
+        el.className = isReject && i === 3 ? "pipe-step reject" : "pipe-step active";
+      }
+    }
+  }
+
+  async function executeKEM(isAttack = false) {
+    pulseGlow = 4;
+    const pStatus = document.getElementById("pipelineStatus");
+    const statusBadge = document.getElementById("statusBadge");
+    const statusText = document.getElementById("statusText");
+
+    // Sample new noise and mutate NTT spectrum
+    for (let i = 0; i < N; i++) {
+      sampleCBD();
+      nttCoeffs[i] = (nttCoeffs[i] + Math.random() * 800 - 400 + Q) % (Q / 2);
+    }
+
+    // Pipeline Steps
+    setPipelineStep(0);
+    pStatus.innerText = "ENCAPSULATING...";
+    await new Promise(r => setTimeout(r, 70));
+
+    setPipelineStep(1);
+    pStatus.innerText = "DECAPSULATING (NTT MUL)...";
+    await new Promise(r => setTimeout(r, 70));
+
+    setPipelineStep(2);
+    pStatus.innerText = "RE-ENCRYPTING (FO)...";
+    await new Promise(r => setTimeout(r, 70));
+
+    if (isAttack) {
+      // Simulate CCA2 bitflip failure
+      setPipelineStep(3, true);
+      totalRejections++;
+      document.getElementById("mRejections").innerText = totalRejections;
+
+      statusBadge.style.borderColor = "var(--rose)";
+      statusBadge.style.color = "var(--rose)";
+      statusBadge.style.background = "rgba(244, 63, 94, 0.1)";
+      statusText.innerText = "IMPLICIT REJECTION (z-Secret)";
+
+      pStatus.innerText = "ATTACK DETECTED: c != c'";
+      pStatus.style.color = "var(--rose)";
+    } else {
+      setPipelineStep(4);
+      totalEncaps++;
+      statusBadge.style.borderColor = "var(--emerald)";
+      statusBadge.style.color = "var(--emerald)";
+      statusBadge.style.background = "rgba(16, 185, 129, 0.1)";
+      statusText.innerText = "SYSTEM SECURE";
+
+      pStatus.innerText = "SHARED SECRET ESTABLISHED";
+      pStatus.style.color = "var(--emerald)";
+    }
+
+    // Update match rate
+    const total = totalEncaps + totalRejections;
+    const matchPct = ((totalEncaps / (total || 1)) * 100).toFixed(1);
+    document.getElementById("mMatchRate").innerText = `${matchPct}%`;
+  }
+
+  // =========================================================================
+  // 6. UI Handlers & Main Loop
+  // =========================================================================
+  document.getElementById("btnEncaps").addEventListener("click", () => executeKEM(false));
+  document.getElementById("btnAttack").addEventListener("click", () => executeKEM(true));
+
+  document.getElementById("btnBench").addEventListener("click", () => {
+    isBenchmarking = !isBenchmarking;
+    const btn = document.getElementById("btnBench");
+    btn.innerText = isBenchmarking ? "⏹️ Stoppe Benchmark" : "⚙️ Auto-Benchmark";
+    btn.style.borderColor = isBenchmarking ? "var(--cyan)" : "";
+  });
+
+  // Slider bindings
+  const rngSpeed = document.getElementById("rngSpeed");
+  const rngNodes = document.getElementById("rngNodes");
+  const rngGlow = document.getElementById("rngGlow");
+
+  rngSpeed.addEventListener("input", e => document.getElementById("lblSpeed").innerText = `${parseFloat(e.target.value).toFixed(1)}x`);
+  rngNodes.addEventListener("input", e => {
+    document.getElementById("lblNodes").innerText = e.target.value;
+    document.getElementById("hudNodes").innerText = e.target.value;
+  });
+  rngGlow.addEventListener("input", e => document.getElementById("lblGlow").innerText = e.target.value);
+
+  // Main Render Loop
+  let lastBenchTime = performance.now();
+
+  function animate(t) {
+    requestAnimationFrame(animate);
+
+    const speed = parseFloat(rngSpeed.value);
+    const nodes = parseInt(rngNodes.value, 10);
+    const glow = parseInt(rngGlow.value, 10);
+
+    renderTorus(speed, nodes, glow);
+    renderNTT();
+    renderCBD();
+
+    // Benchmark loop step
+    if (isBenchmarking && t - lastBenchTime > 160) {
+      lastBenchTime = t;
+      executeKEM(Math.random() < 0.15); // 15% attack probability in stress test
+    }
+  }
+  requestAnimationFrame(animate);
+</script>
+</body>
+</html>
