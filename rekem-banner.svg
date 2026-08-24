@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070a13" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="primaryGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F2FE" />
+      <stop offset="100%" stop-color="#4FACFE" />
+    </linearGradient>
+    <linearGradient id="purpleGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#7e22ce" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background Card -->
+  <rect width="800" height="240" rx="16" fill="url(#bg)" stroke="#1e293b" stroke-width="2"/>
+
+  <!-- Logo Icon: Torus & Re-Encryption Orbit -->
+  <g transform="translate(130, 120)">
+    <!-- Lattice Torus Orbit Ellipses -->
+    <ellipse cx="0" cy="0" rx="75" ry="32" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" />
+    <ellipse cx="0" cy="0" rx="60" ry="24" fill="none" stroke="url(#purpleGlow)" stroke-width="2" opacity="0.6"/>
+    
+    <!-- Re-Encryption Active Path Loop -->
+    <path d="M -70 0 C -70 -45, 70 -45, 70 0 C 70 45, -70 45, -70 0" 
+          fill="none" stroke="url(#primaryGlow)" stroke-width="3.5" filter="url(#glow)"/>
+    
+    <!-- Discrete Torus Lattice Nodes -->
+    <circle cx="-60" cy="-12" r="3.5" fill="#00F2FE" />
+    <circle cx="-35" cy="-22" r="3" fill="#c084fc" />
+    <circle cx="0" cy="-25" r="4" fill="#00F2FE" filter="url(#glow)"/>
+    <circle cx="35" cy="-22" r="3" fill="#c084fc" />
+    <circle cx="60" cy="-12" r="3.5" fill="#00F2FE" />
+    <circle cx="0" cy="25" r="3.5" fill="#4FACFE" />
+    <circle cx="-45" cy="18" r="3" fill="#9333ea" />
+    <circle cx="45" cy="18" r="3" fill="#9333ea" />
+  </g>
+
+  <!-- Typography -->
+  <g transform="translate(240, 105)">
+    <text font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="64" letter-spacing="-1">
+      <tspan fill="#ffffff">Re</tspan>
+      <tspan fill="#38bdf8">-</tspan>
+      <tspan fill="url(#primaryGlow)">KEM</tspan>
+    </text>
+    <text y="42" font-family="ui-monospace, monospace" font-size="14" font-weight="600" fill="#94a3b8" letter-spacing="3">
+      RING-LWE POST-QUANTUM KEY ENCAPSULATION
+    </text>
+    <g transform="translate(0, 68)">
+      <rect width="78" height="22" rx="4" fill="#0284c7" fill-opacity="0.2" stroke="#0284c7" stroke-width="1"/>
+      <text x="12" y="15" font-family="ui-monospace, monospace" font-size="11" fill="#38bdf8" font-weight="700">IND-CCA2</text>
+      
+      <rect x="88" width="70" height="22" rx="4" fill="#7c3aed" fill-opacity="0.2" stroke="#7c3aed" stroke-width="1"/>
+      <text x="98" y="15" font-family="ui-monospace, monospace" font-size="11" fill="#c084fc" font-weight="700">n = 256</text>
+
+      <rect x="168" width="76" height="22" rx="4" fill="#0f766e" fill-opacity="0.2" stroke="#0f766e" stroke-width="1"/>
+      <text x="178" y="15" font-family="ui-monospace, monospace" font-size="11" fill="#2dd4bf" font-weight="700">q = 7681</text>
+    </g>
+  </g>
+</svg>

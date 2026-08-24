@@ -1,8 +1,22 @@
 # RE-KEM — Ring-Extended Key Encapsulation Mechanism
 
+<p align="center">
+  <img src="rekem-banner.svg" alt="RE-KEM" width="100%" />
+</p>
+
 **Post-Quantum Ring-LWE Key Encapsulation Mechanism (IND-CCA2)**
 
 A self-contained, dependency-light Python implementation of a post-quantum secure key encapsulation mechanism built on Ring-LWE in the ring ℤ₇₆₈₁[X]/(X²⁵⁶ + 1), protected by the Fujisaki–Okamoto transform (QROM-secure) and hardened with constant-time primitives.
+
+```
+██████╗ ███████╗      ██╗  ██╗███████╗███╗   ███╗
+██╔══██╗██╔════╝      ██║ ██╔╝██╔════╝████╗ ████║
+██████╔╝█████╗  █████╗█████═╝ █████╗  ██╔████╔██║
+██╔══██╗██╔══╝  ╚════╝██╔═██╗ ██╔══╝  ██║╚██╔╝██║
+██║  ██║███████╗      ██║ ╚██╗███████╗██║ ╚═╝ ██║
+╚═╝  ╚═╝╚══════╝      ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝
+──[ Post-Quantum Lattice KEM • Ring-LWE • IND-CCA2 ]──
+```
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -160,7 +174,9 @@ rekem.py   # Full implementation + self-test + benchmark (single file)
 
 ## 📄 License
 
-MIT — see [LICENSE](LICENSE).
+**AGPL-3.0** — GNU Affero General Public License v3.0. See [LICENSE](LICENSE).
+
+This is the CSTRSK standard license: any network service using a modified version of this software must make its source code available to its users.
 
 ## 🤝 Contributing
 
