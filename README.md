@@ -141,6 +141,33 @@ Performance (Python / Numpy auf 100 Durchläufen):
   Decaps: ~9.5 ms (inkl. vollständiger Re-Encryption)
 ```
 
+## 📊 Stresstest: 1.000.000 Schlüsselpaare
+
+On 24 August 2026, RE-KEM passed its largest stress test: **1.000.000 key pairs** (KeyGen + Encaps + Decaps per pair) in a single run, **247.8 minutes** of continuous load at **67.3 complete key exchanges per second** — pure Python/NumPy, no C extensions, no external crypto libraries.
+
+| Metric | Result |
+|--------|--------|
+| Key pairs | 1,000,000 |
+| Successful roundtrips | 1,000,000 (100 %) |
+| Failed roundtrips | 0 |
+| Bitflip rejections (IND-CCA2) | 1,000 |
+| Bitflip leaks | 0 |
+| Public-key collisions | 0 |
+| Throughput | 67.3 roundtrips/s (~200 crypto ops/s) |
+| Duration | 247.8 min (14,866 s) |
+
+Latency statistics (sampled, n = 10,000 per operation):
+
+| Operation | Mean | Median | p95 | p99 | Min | Max |
+|-----------|------|--------|-----|-----|-----|-----|
+| KeyGen | 2.101 ms | 1.194 ms | 4.428 ms | 29.983 ms | 1.005 ms | 192.463 ms |
+| Encaps | 3.810 ms | 2.260 ms | 8.410 ms | 38.157 ms | 1.865 ms | 140.314 ms |
+| Decaps | 6.425 ms | 3.340 ms | 15.939 ms | 48.553 ms | 2.667 ms | 440.664 ms |
+
+The 1,000 bitflip attacks on valid ciphertexts were all rejected via implicit rejection (0 leaks), confirming the Fujisaki–Okamoto IND-CCA2 path empirically at scale.
+
+Verdict: **PASS** — full machine-readable analysis: [`analysis/1m-key-test.json`](analysis/1m-key-test.json)
+
 ## 🧠 Design Notes
 
 ### Negacyclic NTT with Precomputed Twiddles

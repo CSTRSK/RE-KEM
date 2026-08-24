@@ -1,0 +1,44 @@
+{
+  "summary": {
+    "n": 1000000,
+    "started": "2026-08-24 19:04:12 UTC",
+    "finished": "2026-08-24 23:11:58 UTC",
+    "duration_seconds": 14866.0,
+    "duration_minutes": 247.8,
+    "roundtrips_ok": 1000000,
+    "roundtrips_fail": 0,
+    "bitflip_rejections": 1000,
+    "bitflip_leaks": 0,
+    "pk_collisions": 0,
+    "throughput_ops_per_s": 67.3
+  },
+  "keygen_stats": {
+    "count": 10000,
+    "mean_ms": 2.101,
+    "median_ms": 1.1938,
+    "min_ms": 1.0054,
+    "max_ms": 192.4625,
+    "p95_ms": 4.4279,
+    "p99_ms": 29.9829
+  },
+  "encaps_stats": {
+    "count": 10000,
+    "mean_ms": 3.8095,
+    "median_ms": 2.2597,
+    "min_ms": 1.8645,
+    "max_ms": 140.3137,
+    "p95_ms": 8.4104,
+    "p99_ms": 38.1573
+  },
+  "decaps_stats": {
+    "count": 10000,
+    "mean_ms": 6.425,
+    "median_ms": 3.3397,
+    "min_ms": 2.6674,
+    "max_ms": 440.6635,
+    "p95_ms": 15.9385,
+    "p99_ms": 48.553
+  },
+  "failures": [],
+  "verdict": "PASS"
+}
