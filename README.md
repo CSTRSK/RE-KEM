@@ -184,6 +184,10 @@ rekem.py   # Full implementation + self-test + benchmark (single file)
 
 This is the CSTRSK standard license: any network service using a modified version of this software must make its source code available to its users.
 
+## © Copyright
+
+**CSTRSK.DE · COPYRIGHT 2008–2026** — [cstrsk.de](https://cstrsk.de) · [GitHub: CSTRSK/RE-KEM](https://github.com/CSTRSK/RE-KEM) · [Live Dashboard](https://cstrsk.de/RE-KEM-Dashboard/) · [GitHub Pages](https://cstrsk.github.io/RE-KEM/)
+
 ## 🤝 Contributing
 
 Found a bug, a timing leak, or a way to speed up the NTT? Open an issue or PR. Performance improvements (vectorized NTT, C extensions, GPU offload) are especially welcome.
