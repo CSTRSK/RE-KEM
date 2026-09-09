@@ -9,12 +9,12 @@
 A self-contained, dependency-light Python implementation of a post-quantum secure key encapsulation mechanism built on Ring-LWE in the ring ℤ₇₆₈₁[X]/(X²⁵⁶ + 1), protected by the Fujisaki–Okamoto transform (QROM-secure) and hardened with constant-time primitives.
 
 ```
-██████╗ ███████╗      ██╗  ██╗███████╗███╗   ███╗
-██╔══██╗██╔════╝      ██║ ██╔╝██╔════╝████╗ ████║
-██████╔╝█████╗  █████╗█████═╝ █████╗  ██╔████╔██║
-██╔══██╗██╔══╝  ╚════╝██╔═██╗ ██╔══╝  ██║╚██╔╝██║
-██║  ██║███████╗      ██║ ╚██╗███████╗██║ ╚═╝ ██║
-╚═╝  ╚═╝╚══════╝      ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝
+██████╗ ███████╗       ██╗  ██╗███████╗███╗   ███╗
+██╔══██╗██╔════╝       ██║ ██╔╝██╔════╝████╗ ████║
+██████╔╝█████╗  █████╗ █████═╝ █████╗  ██╔████╔██║
+██╔══██╗██╔══╝  ╚════╝ ██╔═██╗ ██╔══╝  ██║╚██╔╝██║
+██║  ██║███████╗       ██║ ╚██╗███████╗██║ ╚═╝ ██║
+╚═╝  ╚═╝╚══════╝       ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝
 ──[ Post-Quantum Lattice KEM • Ring-LWE • IND-CCA2 ]──
 ```
 
