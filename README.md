@@ -20,11 +20,11 @@ A self-contained, dependency-light Python implementation of a post-quantum secur
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  RE-KEM: Ring-LWE KEM                                                 │
-│  • Ring:      Z_q[X] / (X^n + 1),  n = 256, q = 7681                  │
-│  • Mult:      O(n log n) via Negacyclic NTT                            │
-│  • Security:  IND-CCA2 (Fujisaki–Okamoto, QROM)                       │
-│  • Hardening: Constant-time sampling, decoding, rejection              │
+│  RE-KEM: Ring-LWE KEM                                                   │
+│  • Ring:      Z_q[X] / (X^n + 1),  n = 256, q = 7681                    │
+│  • Mult:      O(n log n) via Negacyclic NTT                             │
+│  • Security:  IND-CCA2 (Fujisaki–Okamoto, QROM)                         │
+│  • Hardening: Constant-time sampling, decoding, rejection               │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
