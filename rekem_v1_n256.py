@@ -1,21 +1,10 @@
-"""Ring-Extended Key Encapsulation Mechanism (REVISED)
+"""Ring-Extended Key Encapsulation Mechanism
 
 Post-Quantum Ring-LWE Key Encapsulation Mechanism (RE-KEM)
-- Ring: Z_q[X] / (X^n + 1) mit n=512, q=12289, eta=8
-  (identisch zu den publizierten NewHope-512-Parametern, siehe
-   Alkim/Ducas/Poeppelmann/Schwabe 2016 + Tight-Bound-Refinement
-   Plantard et al., eprint 2019/1451 — analysierte Sicherheits-
-   marge & Decapsulation-Failure-Rate. Die ORIGINALEN Parameter
-   n=256, q=7681, eta=2 dieses Repos entsprechen KEINEM publizierten,
-   kryptanalysierten Parametersatz und liegen dimensions- und
-   rauschmaessig deutlich UNTER dem, was NewHope oder Kyber fuer
-   eine PQ-Sicherheitsmarge verwenden - das war die kritischste
-   Schwachstelle des Originals.)
+- Ring: Z_q[X] / (X^n + 1) mit n=256, q=7681
 - Multiplikation: O(n log n) via Negacyclic NTT
 - Sicherheit: IND-CCA2 via Fujisaki-Okamoto Transform (QROM-sicher)
 - Timing-Schutz: Constant-Time Sampling, Decoding und Rejection
-  auf Algorithmus-Ebene (siehe Hinweis in decaps/encaps-Docstrings
-  zu den Grenzen dieser Garantie in reinem Python/CPython/NumPy)
 """
 
 import numpy as np
@@ -25,10 +14,10 @@ import time
 
 
 class PostQuantumRingLWEKEM:
-    def __init__(self, n: int = 512, q: int = 12289, eta: int = 8):
-        self.n = n          # Polynomgrad (Dimension des Torus) - NewHope-512-Niveau
-        self.q = q          # Primzahl-Modulus: 12289 = 12*1024 + 1 (NTT-freundlich bis n=4096)
-        self.eta = eta      # CBD-Rauschparameter - NewHope-512-Niveau (Original: eta=2, unteranalysiert)
+    def __init__(self, n: int = 256, q: int = 7681, eta: int = 2):
+        self.n = n          # Polynomgrad (Dimension des Torus)
+        self.q = q          # Primzahl-Modulus: 7681 = 15 * 512 + 1 (NTT-freundlich)
+        self.eta = eta      # CBD-Rauschparameter
 
         # Precomputations für negazyklische NTT
         self.psi = self._find_primitive_root_2n()
@@ -156,51 +145,25 @@ class PostQuantumRingLWEKEM:
     # =========================================================================
 
     def _cbd_sample(self, seed: bytes, nonce: int) -> np.ndarray:
-        """Centered Binomial Distribution CBD(eta) via Bit-Popcount.
-
-        FIX: Der Original-Code war fest auf eta=2 verdrahtet (2-Bit-Nibble-Trick
-        mit 0x55555555-Maske) und ignorierte self.eta vollständig - mit eta=8
-        (NewHope-512-Niveau) hätte er falsche/zu schmale Rauschwerte geliefert.
-        Diese Version ist für beliebiges eta korrekt: pro Koeffizient werden
-        2*eta Bits gezogen, in zwei eta-Bit-Hälften gesplittet und deren
-        Popcounts subtrahiert (a-b, Wertebereich [-eta, +eta]).
-        """
-        bits_per_coeff = 2 * self.eta
-        total_bits = bits_per_coeff * self.n
-        total_bytes = (total_bits + 7) // 8
-        raw_bytes = hashlib.shake_256(seed + bytes([nonce])).digest(total_bytes)
-        bit_arr = np.unpackbits(np.frombuffer(raw_bytes, dtype=np.uint8))[:total_bits]
-        bit_arr = bit_arr.reshape(self.n, bits_per_coeff).astype(np.int64)
-        a = bit_arr[:, :self.eta].sum(axis=1)
-        b = bit_arr[:, self.eta:].sum(axis=1)
-        return a - b
+        """Constant-Time Centered Binomial Distribution (eta=2) via Bit-Popcount."""
+        raw_bytes = hashlib.shake_256(seed + bytes([nonce])).digest(self.n * 2)
+        coeffs = []
+        for i in range(0, len(raw_bytes), 4):
+            chunk = int.from_bytes(raw_bytes[i:i + 4], byteorder="little")
+            d = (chunk & 0x55555555) + ((chunk >> 1) & 0x55555555)
+            for j in range(8):
+                a = (d >> (4 * j)) & 0x3
+                b = (d >> (4 * j + 2)) & 0x3
+                coeffs.append(a - b)
+        return np.array(coeffs[:self.n], dtype=np.int64)
 
     def _expand_a(self, seed: bytes) -> np.ndarray:
-        """Uniforme Expansion des öffentlichen Polynoms a(x) aus 32 Bytes.
-
-        FIX: Der Original-Code nahm rohe 16-Bit-Werte mod q ohne Rejection
-        Sampling. Da 65536 kein Vielfaches von q ist, waren kleine Restklassen
-        systematisch häufiger als grosse - eine messbare, wenn auch kleine,
-        statistische Verzerrung des öffentlichen Polynoms a(x), die die
-        formale RLWE-Sicherheitsreduktion (die uniformes a voraussetzt)
-        unterläuft. Fix: NewHope-Stil Rejection Sampling - 16-Bit-Worte aus
-        dem SHAKE-256-Strom werden nur akzeptiert, wenn sie < floor(65536/q)*q
-        liegen (Ablehnungsrate hier ca. 6-7 %), erst dann mod q reduziert.
-        """
-        limit = (65536 // self.q) * self.q
-        coeffs = []
-        nonce = 0
-        while len(coeffs) < self.n:
-            need = self.n - len(coeffs)
-            raw = hashlib.shake_256(seed + bytes([nonce])).digest(need * 3)
-            nonce += 1
-            for i in range(0, len(raw) - 1, 2):
-                val = raw[i] | (raw[i + 1] << 8)
-                if val < limit:
-                    coeffs.append(val % self.q)
-                    if len(coeffs) == self.n:
-                        break
-        return np.array(coeffs, dtype=np.int64)
+        """Deterministische Expansion des öffentlichen Polynoms a(x) aus 32 Bytes."""
+        raw = hashlib.shake_256(seed).digest(self.n * 2)
+        poly = np.zeros(self.n, dtype=np.int64)
+        for i in range(self.n):
+            poly[i] = (raw[2 * i] | (raw[2 * i + 1] << 8)) % self.q
+        return poly
 
     def _encode_poly(self, poly: np.ndarray) -> bytes:
         """Packt Koeffizienten in Byte-Repräsentation (2 Bytes pro Koeffizient)."""
@@ -231,14 +194,9 @@ class PostQuantumRingLWEKEM:
         e1 = self._cbd_sample(coins, nonce=1)
         e2 = self._cbd_sample(coins, nonce=2)
 
-        # 32 Byte Klartext als Amplituden (q/2) auf das Torus-Polynom aufmodulieren.
-        # FIX: n ist jetzt groesser als die 256 Nachrichtenbits (32 Byte) - die
-        # restlichen Koeffizienten werden mit 0 aufgefuellt statt (wie im
-        # Original bei n==256 unbemerkt) eine Shape-Fehlanpassung zu erzeugen.
+        # 32 Byte Klartext als Amplituden (q/2) auf das Torus-Polynom aufmodulieren
         msg_bits = np.unpackbits(np.frombuffer(msg_bytes, dtype=np.uint8))
-        msg_bits_full = np.zeros(self.n, dtype=np.uint8)
-        msg_bits_full[:len(msg_bits)] = msg_bits
-        msg_poly = (msg_bits_full.astype(np.int64) * (self.q // 2)) % self.q
+        msg_poly = (msg_bits.astype(np.int64) * (self.q // 2)) % self.q
 
         # u(x) = a(x)*r(x) + e1(x) | v(x) = b(x)*r(x) + e2(x) + msg(x)
         u = (self._poly_mul_ntt(a, r) + e1) % self.q
@@ -253,9 +211,7 @@ class PostQuantumRingLWEKEM:
 
         # w(x) = v(x) - u(x)*s(x)
         w = (v - self._poly_mul_ntt(u, s)) % self.q
-        # Nur die ersten 256 Bit (32 Byte) tragen die Nachricht, siehe FIX in
-        # _pke_encrypt - der Rest von w sind die aufgefuellten Nullkoeffizienten.
-        return self._ct_decode_coefficients(w)[:32]
+        return self._ct_decode_coefficients(w)
 
     # =========================================================================
     # 5. Public API: Fujisaki-Okamoto KEM (IND-CCA2)
@@ -264,9 +220,9 @@ class PostQuantumRingLWEKEM:
     def keygen(self) -> tuple[bytes, bytes]:
         """
         Generiert ein IND-CCA2 KEM Schlüsselpaar.
-        Returns (bei n=512, q=12289):
-            pk: 1056 Bytes (32B Seed + 1024B Polynom b)
-            sk: 2144 Bytes (1024B s + 1056B PK + 32B H(PK) + 32B z)
+        Returns:
+            pk: 544 Bytes (32B Seed + 512B Polynom b)
+            sk: 1120 Bytes (512B s + 544B PK + 32B H(PK) + 32B z)
         """
         seed_a = secrets.token_bytes(32)
         noise_seed = secrets.token_bytes(32)
@@ -287,8 +243,8 @@ class PostQuantumRingLWEKEM:
     def encaps(self, pk: bytes) -> tuple[bytes, bytes]:
         """
         Kapselt ein 256-Bit Shared Secret für den Public Key.
-        Returns (bei n=512, q=12289):
-            ciphertext: 2048 Bytes (u, v)
+        Returns:
+            ciphertext: 1024 Bytes (u, v)
             shared_secret: 32 Bytes
         """
         m = secrets.token_bytes(32)
@@ -310,20 +266,6 @@ class PostQuantumRingLWEKEM:
     def decaps(self, sk: bytes, ciphertext: bytes) -> bytes:
         """
         Dekapselt das Shared Secret mit vollständiger Re-Encryption & Implicit Rejection.
-
-        HINWEIS zur Reichweite der Constant-Time-Garantie: Der FO-Vergleich
-        (_ct_compare) und die Ableitung des Shared Secret (_ct_select) sind
-        auf Algorithmus-Ebene branchless. Das deckt aber NICHT die darunter-
-        liegende NTT/Polynomarithmetik (_poly_mul_ntt, CBD-Sampling) ab -
-        dort verarbeitet reines CPython/NumPy geheime Koeffizienten ohne
-        Kontrolle über Cache-Verhalten, Branch-Prediction der Interpreter-
-        Schleifen oder variable-time BigInt-Operationen. "Constant-time"
-        ist hier ein Algorithmus-Design-Ziel, keine verifizierte Eigenschaft
-        der Ausführung. Für einen produktiven Einsatz (laut Whitepaper als
-        Rust-Binary im Hoplite-Node) braucht es eine Portierung in eine
-        Sprache mit tatsächlicher Kontrolle über Timing/Speicherzugriffs-
-        muster, plus Messung z.B. mit dudect, bevor die Constant-Time-
-        Behauptung belastbar ist.
         """
         poly_bytes = self.n * 2
         pk_bytes_len = 32 + poly_bytes
@@ -368,7 +310,7 @@ if __name__ == "__main__":
     print("Post-Quantum Ring-LWE KEM (IND-CCA2) – Integrationsprüfung")
     print("=" * 65)
 
-    kem = PostQuantumRingLWEKEM(n=512, q=12289, eta=8)
+    kem = PostQuantumRingLWEKEM(n=256, q=7681, eta=2)
 
     # 1. Schlüsselgenerierung
     pk, sk = kem.keygen()

@@ -21,7 +21,7 @@ A self-contained, dependency-light Python implementation of a post-quantum secur
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  RE-KEM: Ring-LWE KEM                                                   │
-│  • Ring:      Z_q[X] / (X^n + 1),  n = 256, q = 7681                    │
+│  • Ring:      Z_q[X] / (X^n + 1),  n = 512, q = 12289                  │
 │  • Mult:      O(n log n) via Negacyclic NTT                             │
 │  • Security:  IND-CCA2 (Fujisaki–Okamoto, QROM)                         │
 │  • Hardening: Constant-time sampling, decoding, rejection               │
@@ -76,12 +76,12 @@ KEM.Encaps(PK)
 
 | Item          | Size   | Description                          |
 |---------------|--------|--------------------------------------|
-| `n`           | 256    | Polynomial degree (torus dimension)  |
-| `q`           | 7681   | NTT-friendly prime (15·512 + 1)      |
-| `η` (eta)     | 2      | CBD noise parameter                  |
-| Public Key    | 544 B  | 32 B seed + 512 B polynomial `b`     |
-| Secret Key    | 1120 B | 512 B `s` + PK + H(PK) + rejection `z` |
-| Ciphertext    | 1024 B | `u` + `v` (2 × 512 B)                |
+| `n`           | 512    | Polynomial degree (torus dimension)  |
+| `q`           | 12289  | NTT-friendly prime (12·1024 + 1)     |
+| `η` (eta)     | 8      | CBD noise parameter (NewHope-512)    |
+| Public Key    | 1056 B | 32 B seed + 1024 B polynomial `b`    |
+| Secret Key    | 2144 B | 1024 B `s` + PK + H(PK) + rejection `z` |
+| Ciphertext    | 2048 B | `u` + `v` (2 × 1024 B)               |
 | Shared Secret | 32 B   | KDF output (256 bit)                 |
 
 ## 📦 Installation
@@ -100,7 +100,7 @@ import secrets
 from rekem import PostQuantumRingLWEKEM
 
 # Instantiate the scheme
-kem = PostQuantumRingLWEKEM(n=256, q=7681, eta=2)
+kem = PostQuantumRingLWEKEM(n=512, q=12289, eta=8)
 
 # ── Key generation ──
 pk, sk = kem.keygen()
@@ -195,9 +195,20 @@ The `2n`-th primitive root of unity `ψ` is found automatically at init (`_find_
 
 - **IND-CCA2:** The FO transform with implicit rejection prevents chosen-ciphertext attacks; any tampered ciphertext yields a pseudorandom secret derived from `z`, never the real key.
 - **QROM:** `G` and `H` are modeled as quantum random oracles (SHA3-512 / SHA3-256 / SHAKE-256).
-- **Parameter regime:** Ring-LWE with n = 256, q = 7681, η = 2 targets post-quantum security comparable to NIST LWE-based candidates (educational / research reference — see disclaimer).
+- **Parameter regime:** Ring-LWE with n = 512, q = 12289, η = 8 — these match the published **NewHope-512** parameters (Alkim/Ducas/Poeppelmann/Schwabe 2016, with tight-bound refinement: Plantard et al., eprint 2019/1451), i.e. a cryptanalysed parameter set with an analysed security margin and decapsulation-failure rate.
 
-> ⚠️ **Disclaimer:** This is a **reference / educational implementation** for studying post-quantum KEM design. It has not been independently audited and should **not** be used in production without formal security review and constant-time validation on the target platform.
+### Security Fixes (Revision 2026-09)
+
+The previous revision used n = 256, q = 7681, η = 2 — a parameter set that corresponds to **no published, cryptanalysed parameter regime** and sits well below what NewHope or Kyber use for a post-quantum margin. Four concrete defects were fixed:
+
+| # | Defect (old) | Fix (new) |
+|---|--------------|-----------|
+| 1 | **Non-standard parameters** (n=256, q=7681, η=2) | NewHope-512: n=512, q=12289, η=8 |
+| 2 | `_cbd_sample` was hard-wired to η=2 (ignored `self.eta`) | Generalised: 2·η bits per coefficient, split and subtracted |
+| 3 | `_expand_a` took raw 16-bit values mod q → **statistical bias** in the public polynomial `a(x)` (65536 is not a multiple of q), undermining the RLWE uniformity assumption | NewHope-style **rejection sampling** (accept only values < ⌊65536/q⌋·q, ~6–7 % rejection) |
+| 4 | Message poly assumed n=256 → shape mismatch at n>256 | Zero-padding to `self.n` coefficients |
+
+> ⚠️ **Disclaimer:** This is a **reference / educational implementation** for studying post-quantum KEM design. It has not been independently audited and should **not** be used in production without formal security review and constant-time validation on the target platform. In particular, the constant-time claims are an **algorithm-level design goal**: pure CPython/NumPy gives no control over interpreter branches, cache behaviour or variable-time bignum operations. A production deployment (e.g. a Rust binary) must be ported and measured (dudect) before the claim is defensible.
 
 ## 📁 Project Structure
 
